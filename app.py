@@ -10,7 +10,7 @@ import joblib
 import os
 import datetime
 from rdkit import Chem
-# from rdkit.Chem import AllChem, MACCSkeys
+from rdkit.Chem import AllChem, MACCSkeys
 from rdkit.Chem.Scaffolds import MurckoScaffold
 # import matplotlib.pyplot as plt
 # import seaborn as sns
