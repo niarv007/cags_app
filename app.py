@@ -284,7 +284,12 @@ def run_screening(df, smiles_col, models):
     prog.empty()
 
     final = pd.concat(results_all)
-    return final.sort_values("Consensus_Probability",ascending=False)
+    if not results_all:
+    st.warning("No valid molecules found.")
+    return pd.DataFrame()
+
+# final = pd.concat(results_all)
+#     return final.sort_values("Consensus_Probability",ascending=False)
 
 # ============================================================
 # PLOTS
@@ -447,7 +452,11 @@ def show_predictor():
             df = pd.read_csv(file)
             st.dataframe(df.head())
 
-            smiles_col = next((c for c in df.columns if "smile" in c.lower()),None)
+            # smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
+
+        if smiles_col is None:
+            st.error("No SMILES column detected in uploaded file.")
+            return
 
             if st.button("Start Virtual Screening"):
 
@@ -488,6 +497,7 @@ st.info(
     "**CaGS-AP** is an AI-driven platform for predicting inhibitors of "
     "*Candida albicans* **β-1,3-glucan synthase**, supporting antifungal drug discovery."
 )
+
 
 
 
