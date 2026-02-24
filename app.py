@@ -433,11 +433,11 @@ def show_overview():
 
 def show_predictor():
 
-    st.markdown("<div class='section-title'>CaGS-AP Activity Predictor</div>",unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>CaGS-AP Activity Predictor</div>", unsafe_allow_html=True)
 
     st.sidebar.header("Input Mode")
 
-    mode = st.sidebar.radio("Choose Option",["Upload CSV","Predict from SMILES"])
+    mode = st.sidebar.radio("Choose Option", ["Upload CSV", "Predict from SMILES"])
 
     models = st.sidebar.multiselect(
         "Select Models",
@@ -447,25 +447,28 @@ def show_predictor():
 
     if mode == "Upload CSV":
 
-        file = st.file_uploader("Upload CSV",type=["csv"])
+        file = st.file_uploader("Upload CSV", type=["csv"])
 
-        if file:
+        if file is not None:
 
             df = pd.read_csv(file)
             st.dataframe(df.head())
 
-            # smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
+            smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
 
-        if smiles_col is None:
-            st.error("No SMILES column detected in uploaded file.")
-            return
+            if smiles_col is None:
+                st.error("No SMILES column detected in uploaded file.")
+                return
 
             if st.button("Start Virtual Screening"):
 
-                results = run_screening(df,smiles_col,models)
+                results = run_screening(df, smiles_col, models)
+
+                if results.empty:
+                    return
 
                 results = compute_consensus_metrics(results)
-                results["Confidence"] = results.apply(assign_confidence,axis=1)
+                results["Confidence"] = results.apply(assign_confidence, axis=1)
                 results["Scaffold"] = results[smiles_col].apply(get_scaffold)
 
                 st.dataframe(results)
@@ -484,7 +487,7 @@ def show_predictor():
         smiles = st.text_area("Paste SMILES here:")
 
         if st.button("Predict Activity"):
-            single_smiles_predict(smiles,models)
+            single_smiles_predict(smiles, models)
 
 # ============================================================
 # ROUTER
@@ -499,6 +502,7 @@ st.info(
     "**CaGS-AP** is an AI-driven platform for predicting inhibitors of "
     "*Candida albicans* **β-1,3-glucan synthase**, supporting antifungal drug discovery."
 )
+
 
 
 
