@@ -1,6 +1,5 @@
 # ============================================================
-# CaGS-AP FINAL MERGED APPLICATION
-# UI + Analytics + Predictor (Publication Ready)
+# CaGS-AP FINAL MERGED APPLICATION (Upgraded Research Version)
 # ============================================================
 
 import streamlit as st
@@ -8,12 +7,18 @@ import pandas as pd
 import numpy as np
 import joblib
 import os
-import datetime
 from rdkit import Chem
 from rdkit.Chem import AllChem, MACCSkeys
 from rdkit.Chem.Scaffolds import MurckoScaffold
-# import matplotlib.pyplot as plt
-# import seaborn as sns
+
+# ---- Safe Matplotlib Backend (Cloud Compatible) ----
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+# ---- PDF Report ----
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
+from reportlab.lib.styles import getSampleStyleSheet
 
 # ============================================================
 # PAGE CONFIG
@@ -26,132 +31,11 @@ st.set_page_config(
 )
 
 # ============================================================
-# GLOBAL CSS
-# ============================================================
-st.markdown("""
-<style>
-
-/* ===== GLOBAL FONT OVERRIDE (CRITICAL) ===== */
-/* Apply Georgia ONLY to app text */
-.stApp,
-.block-container,
-.title,
-.subtitle,
-.hero,
-.section-title,
-p,
-label,
-h1, h2, h3, h4, h5, h6 {
-    font-family: Georgia, serif !important;
-}
-
-/* ❌ EXCLUDE interactive widgets */
-div[data-testid="stDataFrame"],
-div[role="menu"],
-div[role="menu"] *,
-div[class*="Mui"],
-div[class*="ag-"],
-div[class*="slick"],
-canvas {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont,
-                 "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-}
-    font-family: Georgia, serif !important;
-}
-
-/* Streamlit app background */
-.stApp{
-    background-image:url("background.png");
-    background-size:cover;
-    background-attachment:fixed;
-}
-
-/* Main content container */
-.block-container{
-    background:rgba(255,255,255,0.92);
-    padding:1.8rem;
-    border-radius:20px;
-}
-
-/* Titles */
-.title{
-    text-align:center;
-    font-size:36px;
-    font-weight:700;
-    color:#1f3c88;
-}
-
-.subtitle{
-    text-align:center;
-    font-size:15px;
-    color:#555;
-}
-
-/* Hero */
-.hero{
-    background:linear-gradient(90deg,#1f4e79,#3c8dbc);
-    padding:22px;
-    border-radius:16px;
-    color:white;
-    text-align:center;
-    margin-bottom:15px;
-}
-
-/* Section titles */
-.section-title{
-    font-size:22px;
-    font-weight:600;
-    text-align:center;
-    margin:10px 0 6px 0;
-}
-
-/* Workflow image */
-.workflow-img img{
-    max-height:280px;
-    object-fit:contain;
-}
-
-/* Morphology images */
-.morph-card img{
-    max-height:110px;
-    border-radius:12px;
-    box-shadow:0 6px 16px rgba(0,0,0,0.2);
-}
-
-/* Info box spacing */
-div[data-testid="stAlert"]{
-    margin-top:8px !important;
-    margin-bottom:14px !important;
-    padding-bottom:12px !important;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-
-# ============================================================
 # HEADER
 # ============================================================
 
-st.markdown("<div class='title'>CaGS-AP Info</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>FPGE Lab | Central University of Rajasthan</div>", unsafe_allow_html=True)
-
-st.markdown("""
-<div class="hero">
-<h2>CaGS-AP</h2>
-<h4>AI-Driven Biosolutions for Antifungal Drug Discovery</h4>
-</div>
-""", unsafe_allow_html=True)
-
-# ============================================================
-# NAVIGATION
-# ============================================================
-
-page = st.radio(
-    "Navigation",
-    ["ℹ️ CaGS-AP Overview", "🧪 Activity Predictor"],
-    horizontal=True
-)
+st.markdown("<h1 style='text-align:center;'>CaGS-AP</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center;'>AI-Driven Antifungal Activity Predictor</h4>", unsafe_allow_html=True)
 
 # ============================================================
 # MODEL SETTINGS
@@ -264,7 +148,6 @@ def run_screening(df, smiles_col, models):
         pcols = []
 
         for m in models:
-
             model = load_model(AVAILABLE_MODELS[m])
 
             pred = model.predict(X)
@@ -276,7 +159,6 @@ def run_screening(df, smiles_col, models):
             pcols.append(cname)
 
         res["Consensus_Probability"] = res[pcols].mean(axis=1)
-
         results_all.append(res)
 
         prog.progress(min((i+len(chunk))/total,1.0))
@@ -290,221 +172,159 @@ def run_screening(df, smiles_col, models):
     final = pd.concat(results_all)
     return final.sort_values("Consensus_Probability", ascending=False)
 
-# final = pd.concat(results_all)
-#     return final.sort_values("Consensus_Probability",ascending=False)
-
 # ============================================================
-# PLOTS
+# PLOTS (Publication Ready)
 # ============================================================
 
-# def plot_probability(df):
-#     fig,ax = plt.subplots()
-#     sns.histplot(df["Consensus_Probability"],kde=True,ax=ax)
-#     st.pyplot(fig)
-
-# def plot_heatmap(df):
-#     prob_cols = [c for c in df.columns if c.endswith("_Prob")]
-#     fig,ax = plt.subplots(figsize=(8,5))
-#     sns.heatmap(df[prob_cols].head(30),cmap="viridis",ax=ax)
-#     st.pyplot(fig)
 def plot_probability(df):
-    st.subheader("Consensus Probability Distribution")
-    st.bar_chart(df["Consensus_Probability"])
+
+    fig, ax = plt.subplots(figsize=(8,5), dpi=300)
+    ax.hist(df["Consensus_Probability"], bins=30)
+    ax.set_xlabel("Consensus Probability")
+    ax.set_ylabel("Frequency")
+    ax.set_title("Probability Distribution")
+
+    st.pyplot(fig)
+
+    fig.savefig("probability_plot.png", dpi=300, bbox_inches="tight")
+    with open("probability_plot.png", "rb") as f:
+        st.download_button("Download High-Resolution Plot", f, "probability_plot.png")
 
 def plot_heatmap(df):
-    st.subheader("Model Probability Comparison")
+
     prob_cols = [c for c in df.columns if c.endswith("_Prob")]
-    st.dataframe(df[prob_cols].head(30))
-# ============================================================
-# SINGLE SMILES
-# ============================================================
+    fig, ax = plt.subplots(figsize=(10,6), dpi=300)
 
-def single_smiles_predict(smiles, models):
+    im = ax.imshow(df[prob_cols].head(30), aspect="auto")
+    fig.colorbar(im)
+    ax.set_title("Model Probability Heatmap")
 
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        st.error("Invalid SMILES")
-        return
+    st.pyplot(fig)
 
-    # st.image(Draw.MolToImage(mol,size=(300,300)))
-
-    fp = fingerprints_from_smiles(smiles)
-    X = pd.DataFrame([fp])
-
-    X = pipeline["var_thresh"].transform(X)
-    X = pipeline["feat_selector"].transform(X)
-    X = pipeline["scaler"].transform(X)
-
-    prob_dict = {}
-    votes = 0
-
-    for m in models:
-
-        model = load_model(AVAILABLE_MODELS[m])
-
-        pred = int(model.predict(X)[0])
-        votes += pred
-
-        prob = float(model.predict_proba(X)[0,1])
-        prob_dict[m] = prob
-
-    probs = list(prob_dict.values())
-
-    mean_prob = np.mean(probs)
-    sd_prob = np.std(probs)
-
-    if sd_prob < 0.05:
-        conf = "High"
-    elif sd_prob < 0.15:
-        conf = "Moderate"
-    else:
-        conf = "Low"
-
-    direction = "Active" if mean_prob >= 0.5 else "Not Active"
-
-    scaffold = get_scaffold(smiles)
-
-    st.success(f"Predicted Activity Probability: **{mean_prob:.4f}**")
-    st.write(f"Model Vote: **{votes}/{len(models)}**")
-    st.write(f"Std Dev: **{sd_prob:.4f}**")
-    st.write(f"Confidence: **{conf} ({direction})**")
-    st.write(f"Scaffold: `{scaffold}`")
-
-    st.write("### Model-wise Probabilities")
-    st.table(pd.DataFrame(prob_dict,index=["Probability"]).T)
+    fig.savefig("heatmap.png", dpi=300, bbox_inches="tight")
+    with open("heatmap.png", "rb") as f:
+        st.download_button("Download Heatmap", f, "heatmap.png")
 
 # ============================================================
-# OVERVIEW PAGE
+# PDF REPORT
 # ============================================================
 
-def show_overview():
+def generate_pdf_report(results):
 
-    st.markdown(
-        "<div class='section-title'>Machine Learning Workflow</div>",
-        unsafe_allow_html=True
-    )
+    doc = SimpleDocTemplate("CaGS_AP_Report.pdf")
+    elements = []
+    styles = getSampleStyleSheet()
 
-    st.markdown("<div class='workflow-img'>", unsafe_allow_html=True)
-    st.image("Graphical_Abstract_1200_dpi.png", width="stretch")
-    st.markdown("</div>", unsafe_allow_html=True)
+    elements.append(Paragraph("CaGS-AP Screening Report", styles["Heading1"]))
+    elements.append(Spacer(1,12))
+    elements.append(Paragraph(f"Total Compounds: {len(results)}", styles["Normal"]))
+    elements.append(Spacer(1,12))
 
-    st.markdown(
-        "<div class='section-title'><i>Candida albicans</i> Morphological Forms</div>",
-        unsafe_allow_html=True
-    )
+    top_hits = results.head(10)
+    data = [top_hits.columns.tolist()] + top_hits.values.tolist()
+    elements.append(Table(data))
 
-    IMG_DIR = "images"
+    doc.build(elements)
 
-    cols = st.columns(3)
-
-    forms = [
-        ("Yeast_form.png", "Yeast Form"),
-        ("Hyphal_form.png", "Hyphal Form"),
-        ("Bioflim_form.png", "Biofilm")
-    ]
-
-    for col, (img, label) in zip(cols, forms):
-
-        with col:
-
-            st.image(
-                os.path.join(IMG_DIR, img),
-                width=230
-            )
-
-            st.markdown(
-                f"""
-                <div style="
-                    text-align:center;
-                    font-weight:700;
-                    font-size:18px;
-                    font-family: Georgia, serif;
-                    margin-top:-5px;
-                ">
-                    {label}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+    with open("CaGS_AP_Report.pdf","rb") as f:
+        st.download_button("Download Full PDF Report", f, "CaGS_AP_Report.pdf")
 
 # ============================================================
-# PREDICTOR PAGE
+# APP LOGIC
 # ============================================================
 
-def show_predictor():
+st.sidebar.header("Input Mode")
+mode = st.sidebar.radio("Choose Option", ["Upload CSV","Predict from SMILES"])
 
-    st.markdown("<div class='section-title'>CaGS-AP Activity Predictor</div>", unsafe_allow_html=True)
+models = st.sidebar.multiselect(
+    "Select Models",
+    list(AVAILABLE_MODELS.keys()),
+    default=list(AVAILABLE_MODELS.keys())
+)
 
-    st.sidebar.header("Input Mode")
+if mode == "Upload CSV":
 
-    mode = st.sidebar.radio("Choose Option", ["Upload CSV", "Predict from SMILES"])
+    file = st.file_uploader("Upload CSV", type=["csv"])
 
-    models = st.sidebar.multiselect(
-        "Select Models",
-        list(AVAILABLE_MODELS.keys()),
-        default=list(AVAILABLE_MODELS.keys())
-    )
+    if file is not None:
 
-    if mode == "Upload CSV":
+        df = pd.read_csv(file)
+        st.dataframe(df.head())
 
-        file = st.file_uploader("Upload CSV", type=["csv"])
+        smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
 
-        if file is not None:
-
-            df = pd.read_csv(file)
-            st.dataframe(df.head())
-
-            smiles_col = next((c for c in df.columns if "smile" in c.lower()), None)
-
-            if smiles_col is None:
-                st.error("No SMILES column detected in uploaded file.")
-                return
+        if smiles_col is None:
+            st.error("No SMILES column detected in uploaded file.")
+        else:
 
             if st.button("Start Virtual Screening"):
 
                 results = run_screening(df, smiles_col, models)
 
                 if results.empty:
-                    return
+                    st.stop()
 
                 results = compute_consensus_metrics(results)
                 results["Confidence"] = results.apply(assign_confidence, axis=1)
                 results["Scaffold"] = results[smiles_col].apply(get_scaffold)
+
+                st.subheader("Screening Statistics")
+                st.metric("Total Compounds", len(results))
+                st.metric("Active Predictions", sum(results["Consensus_Probability"] >= 0.5))
+                st.metric("Mean Probability", round(results["Consensus_Probability"].mean(),4))
 
                 st.dataframe(results)
 
                 plot_probability(results)
                 plot_heatmap(results)
 
-                st.download_button(
-                    "Download Results",
-                    results.to_csv(index=False),
-                    "CaGS_AP_results.csv"
-                )
+                st.subheader("Top Scaffolds (SAR Insight)")
+                scaffold_counts = results["Scaffold"].value_counts().head(15)
+                st.dataframe(scaffold_counts)
 
-    else:
+                scaffold_counts.to_csv("scaffold_summary.csv")
+                with open("scaffold_summary.csv","rb") as f:
+                    st.download_button("Download Scaffold Summary", f, "scaffold_summary.csv")
 
-        smiles = st.text_area("Paste SMILES here:")
+                st.download_button("Download Results CSV",
+                                   results.to_csv(index=False),
+                                   "CaGS_AP_results.csv")
 
-        if st.button("Predict Activity"):
-            single_smiles_predict(smiles, models)
+                generate_pdf_report(results)
 
-# ============================================================
-# ROUTER
-# ============================================================
-
-if page == "ℹ️ CaGS-AP Overview":
-    show_overview()
 else:
-    show_predictor()
 
-st.info(
-    "**CaGS-AP** is an AI-driven platform for predicting inhibitors of "
-    "*Candida albicans* **β-1,3-glucan synthase**, supporting antifungal drug discovery."
-)
+    smiles = st.text_area("Paste SMILES here:")
 
+    if st.button("Predict Activity"):
 
+        fp = fingerprints_from_smiles(smiles)
 
+        if fp is None:
+            st.error("Invalid SMILES")
+        else:
 
+            X = pd.DataFrame([fp])
+            X = pipeline["var_thresh"].transform(X)
+            X = pipeline["feat_selector"].transform(X)
+            X = pipeline["scaler"].transform(X)
 
+            prob_dict = {}
+            votes = 0
 
+            for m in models:
+                model = load_model(AVAILABLE_MODELS[m])
+                pred = int(model.predict(X)[0])
+                votes += pred
+                prob = float(model.predict_proba(X)[0,1])
+                prob_dict[m] = prob
+
+            probs = list(prob_dict.values())
+            mean_prob = np.mean(probs)
+            sd_prob = np.std(probs)
+
+            st.success(f"Predicted Activity Probability: {mean_prob:.4f}")
+            st.write(f"Model Vote: {votes}/{len(models)}")
+            st.write(f"Std Dev: {sd_prob:.4f}")
+
+            st.table(pd.DataFrame(prob_dict,index=["Probability"]).T)
