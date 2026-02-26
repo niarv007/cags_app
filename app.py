@@ -10,7 +10,6 @@ import os
 import warnings
 
 from rdkit import Chem
-from rdkit.Chem import rdFingerprintGenerator
 from rdkit.Chem import MACCSkeys
 from rdkit.Chem.Scaffolds import MurckoScaffold
 
@@ -70,35 +69,57 @@ def load_model(name):
     return joblib.load(os.path.join(MODEL_DIR,name))
 
 # ============================================================
-# FINGERPRINTS (FIXED FOR RDKit 2025)
+# FINGERPRINTS (UPDATED TO REMOVE DEPRECATION WARNING)
 # ============================================================
 
-morgan_gen_ecfp = rdFingerprintGenerator.GetMorganGenerator(
-    radius=2,
-    fpSize=1024
-)
+from rdkit import Chem
+from rdkit.Chem import AllChem, MACCSkeys
+import numpy as np
 
-morgan_gen_fcfp = rdFingerprintGenerator.GetMorganGenerator(
-    radius=2,
-    fpSize=1024,
-    useFeatures=True
-)
 
-def fingerprints_from_smiles(smiles):
+def fingerprints_from_smiles(smiles: str):
+    """
+    Generate combined ECFP4, FCFP4, and MACCS fingerprints
+    Returns numpy array or None if invalid SMILES
+    """
 
-    mol = Chem.MolFromSmiles(str(smiles))
+    if not isinstance(smiles, str):
+        return None
+
+    mol = Chem.MolFromSmiles(smiles)
+
     if mol is None:
         return None
 
-    ecfp = morgan_gen_ecfp.GetFingerprint(mol)
-    fcfp = morgan_gen_fcfp.GetFingerprint(mol)
-    maccs = MACCSkeys.GenMACCSKeys(mol)
+    try:
+        # ECFP4 (Morgan radius=2)
+        ecfp = AllChem.GetMorganFingerprintAsBitVect(
+            mol,
+            radius=2,
+            nBits=1024
+        )
 
-    return np.concatenate([
-        np.array(ecfp),
-        np.array(fcfp),
-        np.array(maccs)
-    ])
+        # FCFP4 (Feature-based Morgan)
+        fcfp = AllChem.GetMorganFingerprintAsBitVect(
+            mol,
+            radius=2,
+            nBits=1024,
+            useFeatures=True
+        )
+
+        # MACCS keys (167 bits)
+        maccs = MACCSkeys.GenMACCSKeys(mol)
+
+        # Convert to numpy arrays
+        ecfp_arr = np.array(ecfp)
+        fcfp_arr = np.array(fcfp)
+        maccs_arr = np.array(maccs)
+
+        # Concatenate all fingerprints
+        return np.concatenate([ecfp_arr, fcfp_arr, maccs_arr])
+
+    except Exception:
+        return None
 
 # ============================================================
 # CONSENSUS METRICS
@@ -263,4 +284,5 @@ else:
             st.write(f"Std Dev: {sd_prob:.4f}")
 
             st.table(pd.DataFrame(prob_dict,index=["Probability"]).T)
+
 
