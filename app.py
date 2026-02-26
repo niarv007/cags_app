@@ -70,10 +70,19 @@ def load_model(name):
     return joblib.load(os.path.join(MODEL_DIR,name))
 
 # ============================================================
-# FINGERPRINTS (UPDATED TO REMOVE DEPRECATION WARNING)
+# FINGERPRINTS (FIXED FOR RDKit 2025)
 # ============================================================
 
-morgan_gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=1024)
+morgan_gen_ecfp = rdFingerprintGenerator.GetMorganGenerator(
+    radius=2,
+    fpSize=1024
+)
+
+morgan_gen_fcfp = rdFingerprintGenerator.GetMorganGenerator(
+    radius=2,
+    fpSize=1024,
+    useFeatures=True
+)
 
 def fingerprints_from_smiles(smiles):
 
@@ -81,8 +90,8 @@ def fingerprints_from_smiles(smiles):
     if mol is None:
         return None
 
-    ecfp = morgan_gen.GetFingerprint(mol)
-    fcfp = morgan_gen.GetFingerprint(mol, useFeatures=True)
+    ecfp = morgan_gen_ecfp.GetFingerprint(mol)
+    fcfp = morgan_gen_fcfp.GetFingerprint(mol)
     maccs = MACCSkeys.GenMACCSKeys(mol)
 
     return np.concatenate([
@@ -90,12 +99,6 @@ def fingerprints_from_smiles(smiles):
         np.array(fcfp),
         np.array(maccs)
     ])
-
-def get_scaffold(smiles):
-    mol = Chem.MolFromSmiles(smiles)
-    if mol:
-        return Chem.MolToSmiles(MurckoScaffold.GetScaffoldForMol(mol))
-    return None
 
 # ============================================================
 # CONSENSUS METRICS
@@ -260,3 +263,4 @@ else:
             st.write(f"Std Dev: {sd_prob:.4f}")
 
             st.table(pd.DataFrame(prob_dict,index=["Probability"]).T)
+
